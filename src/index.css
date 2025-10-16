@@ -1,0 +1,4 @@
+
+body { margin: 0; font-family: Arial, sans-serif; background: #f9f9f9; }
+input { font-size: 16px; padding: 5px; width: 100%; box-sizing: border-box; }
+button { cursor: pointer; margin-top: 10px; }
