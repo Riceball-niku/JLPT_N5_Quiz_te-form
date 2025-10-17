@@ -7,14 +7,14 @@ export default function App() {
   const [userAnswers, setUserAnswers] = useState([]);
   const [showResults, setShowResults] = useState(false);
   const [feedback, setFeedback] = useState(null);
-  const [showHint, setShowHint] = useState(Array(questionsData.length).fill(false));
+  const [hintLevels, setHintLevels] = useState([]);
 
   useEffect(() => {
     // Randomize question order
     const shuffled = [...questionsData].sort(() => Math.random() - 0.5);
     setQuestions(shuffled);
     setUserAnswers(Array(shuffled.length).fill(""));
-    setShowHint(Array(shuffled.length).fill(false));
+    setHintLevels(Array(shuffled.length).fill(0)); // start with 0 hints shown
   }, []);
 
   const handleChange = (i, val) => {
@@ -24,9 +24,11 @@ export default function App() {
   };
 
   const handleHint = (i) => {
-    const hint = [...showHint];
-    hint[i] = true;
-    setShowHint(hint);
+    const newLevels = [...hintLevels];
+    if (newLevels[i] < questions[i].answer.length) {
+      newLevels[i] += 1;
+      setHintLevels(newLevels);
+    }
   };
 
   const checkAnswers = () => setShowResults(true);
@@ -69,17 +71,20 @@ export default function App() {
             placeholder="Type your answer"
           />
 
-          {!showResults && !showHint[i] && (
+          {!showResults && (
             <button
               style={{ marginLeft: "10px" }}
               onClick={() => handleHint(i)}
+              disabled={hintLevels[i] >= q.answer.length}
             >
               Hint
             </button>
           )}
-          {showHint[i] && (
+
+          {hintLevels[i] > 0 && (
             <p style={{ color: "blue" }}>
-              Hint: {q.answer.slice(0, 2)}...
+              Hint: {q.answer.slice(0, hintLevels[i])}
+              {hintLevels[i] < q.answer.length ? "..." : ""}
             </p>
           )}
 
