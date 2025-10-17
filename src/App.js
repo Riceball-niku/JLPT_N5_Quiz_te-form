@@ -8,13 +8,14 @@ export default function App() {
   const [showResults, setShowResults] = useState(false);
   const [feedback, setFeedback] = useState(null);
   const [hintLevels, setHintLevels] = useState([]);
+  const [hintCount, setHintCount] = useState(0); // total hints used
 
   useEffect(() => {
-    // Randomize question order
+    // Shuffle questions
     const shuffled = [...questionsData].sort(() => Math.random() - 0.5);
     setQuestions(shuffled);
     setUserAnswers(Array(shuffled.length).fill(""));
-    setHintLevels(Array(shuffled.length).fill(0)); // start with 0 hints shown
+    setHintLevels(Array(shuffled.length).fill(0));
   }, []);
 
   const handleChange = (i, val) => {
@@ -28,19 +29,23 @@ export default function App() {
     if (newLevels[i] < questions[i].answer.length) {
       newLevels[i] += 1;
       setHintLevels(newLevels);
+      setHintCount((prev) => prev + 1);
     }
   };
 
   const checkAnswers = () => setShowResults(true);
 
-  const handleRetry = () => {
-    window.location.reload();
-  };
+  const handleRetry = () => window.location.reload();
 
-  const score = userAnswers.reduce(
+  // Base score
+  const correctAnswers = userAnswers.reduce(
     (a, v, i) => a + (v.trim() === questions[i]?.answer ? 1 : 0),
     0
   );
+
+  // Penalty: -0.25 points per hint
+  const penalty = hintCount * 0.25;
+  const finalScore = Math.max(correctAnswers - penalty, 0).toFixed(2);
 
   const handleFeedback = (isCorrect) => {
     setFeedback(isCorrect ? "👏" : "❌");
@@ -108,7 +113,13 @@ export default function App() {
         </button>
       ) : (
         <div style={{ textAlign: "center", marginTop: "20px" }}>
-          <h2>Your score: {score}/{questions.length}</h2>
+          <h2>
+            Your score: {finalScore}/{questions.length}  
+            <br />
+            <span style={{ fontSize: "0.9em", color: "#666" }}>
+              ({correctAnswers} correct − {penalty.toFixed(2)} hint penalty)
+            </span>
+          </h2>
           <button onClick={handleRetry} style={{ padding: "10px 20px" }}>
             Try Again 🔁
           </button>
