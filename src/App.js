@@ -1,5 +1,6 @@
-import { motion, AnimatePresence } from "framer-motion";
 import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import Confetti from "react-confetti";
 import questionsData from "./questions.json";
 
 export default function App() {
@@ -7,67 +8,57 @@ export default function App() {
   const [userAnswers, setUserAnswers] = useState([]);
   const [showResults, setShowResults] = useState(false);
   const [feedback, setFeedback] = useState(null);
-  const [hintLevels, setHintLevels] = useState([]);
-  const [hintCount, setHintCount] = useState(0);
-  const [currentPage, setCurrentPage] = useState(0);
+  const [page, setPage] = useState(0);
+  const [showConfetti, setShowConfetti] = useState(false);
 
   const questionsPerPage = 10;
-  const startIdx = currentPage * questionsPerPage;
-  const endIdx = startIdx + questionsPerPage;
-  const pageQuestions = questions.slice(startIdx, endIdx);
+  const startIndex = page * questionsPerPage;
+  const endIndex = startIndex + questionsPerPage;
+  const currentQuestions = questions.slice(startIndex, endIndex);
 
   useEffect(() => {
-    const shuffled = [...questionsData]; // can shuffle if you want
-    setQuestions(shuffled);
-    setUserAnswers(Array(shuffled.length).fill(""));
-    setHintLevels(Array(shuffled.length).fill(0));
+    setQuestions(questionsData);
+    setUserAnswers(Array(questionsData.length).fill(""));
   }, []);
 
   const handleChange = (i, val) => {
     const ans = [...userAnswers];
-    ans[i] = val;
+    ans[startIndex + i] = val;
     setUserAnswers(ans);
   };
 
-  const handleHint = (i) => {
-    const newLevels = [...hintLevels];
-    if (newLevels[i] < questions[i].answer.length) {
-      newLevels[i] += 1;
-      setHintLevels(newLevels);
-      setHintCount((prev) => prev + 1);
+  const checkAnswers = () => {
+    setShowResults(true);
+
+    // Check all answers on this page
+    const allCorrect = currentQuestions.every(
+      (q, i) => userAnswers[startIndex + i].trim() === q.answer
+    );
+
+    if (allCorrect) {
+      setShowConfetti(true);
+      setTimeout(() => {
+        setShowConfetti(false);
+        if (endIndex < questions.length) setPage((p) => p + 1);
+      }, 10000); // 10 seconds confetti
     }
   };
 
-  const handleFeedback = (isCorrect) => {
-    setFeedback(isCorrect ? "👏" : "❌");
-    setTimeout(() => setFeedback(null), 1000);
-  };
-
-  const checkAnswers = () => setShowResults(true);
-
-  const handleRetry = () => window.location.reload();
-
-  const correctAnswers = userAnswers.reduce(
+  const score = userAnswers.reduce(
     (a, v, i) => a + (v.trim() === questions[i]?.answer ? 1 : 0),
     0
   );
 
-  const penalty = hintCount * 0.25;
-  const finalScore = Math.max(correctAnswers - penalty, 0).toFixed(2);
-
-  // Check if all questions on the current page are correct
-  const allCorrectOnPage = pageQuestions.every(
-    (q, i) => userAnswers[startIdx + i].trim() === q.answer
-  );
-
   return (
-    <div style={{ padding: "20px", maxWidth: "650px", margin: "auto" }}>
+    <div style={{ padding: "20px", maxWidth: "600px", margin: "auto" }}>
+      {showConfetti && <Confetti />}
+
       <h1>JLPT N5 Grammar Quiz</h1>
       <h3>
-        Page {currentPage + 1} / {Math.ceil(questions.length / questionsPerPage)}
+        Page {page + 1} / {Math.ceil(questions.length / questionsPerPage)}
       </h3>
 
-      {pageQuestions.map((q, i) => (
+      {currentQuestions.map((q, i) => (
         <div
           key={i}
           style={{
@@ -77,42 +68,24 @@ export default function App() {
             borderRadius: "5px",
           }}
         >
-          <p>{startIdx + i + 1}. {q.jp}</p>
+          <p>{startIndex + i + 1}. {q.jp}</p>
           <p style={{ color: "#555" }}>{q.en}</p>
           <input
             type="text"
-            value={userAnswers[startIdx + i]}
-            onChange={(e) => handleChange(startIdx + i, e.target.value)}
-            onBlur={() =>
-              handleFeedback(userAnswers[startIdx + i].trim() === q.answer)
-            }
+            value={userAnswers[startIndex + i]}
+            onChange={(e) => handleChange(i, e.target.value)}
             placeholder="Type your answer"
           />
-          {!showResults && (
-            <button
-              style={{ marginLeft: "10px" }}
-              onClick={() => handleHint(startIdx + i)}
-              disabled={hintLevels[startIdx + i] >= q.answer.length}
-            >
-              Hint
-            </button>
-          )}
-          {hintLevels[startIdx + i] > 0 && (
-            <p style={{ color: "blue" }}>
-              Hint: {q.answer.slice(0, hintLevels[startIdx + i])}
-              {hintLevels[startIdx + i] < q.answer.length ? "..." : ""}
-            </p>
-          )}
           {showResults && (
             <p
               style={{
                 color:
-                  userAnswers[startIdx + i].trim() === q.answer
+                  userAnswers[startIndex + i].trim() === q.answer
                     ? "green"
                     : "red",
               }}
             >
-              {userAnswers[startIdx + i].trim() === q.answer
+              {userAnswers[startIndex + i].trim() === q.answer
                 ? "✅ Correct"
                 : "❌ Correct: " + q.answer}
             </p>
@@ -120,64 +93,15 @@ export default function App() {
         </div>
       ))}
 
-      {!showResults ? (
-        <button onClick={checkAnswers} style={{ padding: "10px 20px" }}>
-          Check Answers
-        </button>
-      ) : (
-        <div style={{ textAlign: "center", marginTop: "20px" }}>
-          <h2>
-            Your score: {finalScore}/{questions.length}  
-            <br />
-            <span style={{ fontSize: "0.9em", color: "#666" }}>
-              ({correctAnswers} correct − {penalty.toFixed(2)} hint penalty)
-            </span>
-          </h2>
-          <button onClick={handleRetry} style={{ padding: "10px 20px" }}>
-            Try Again 🔁
-          </button>
-        </div>
-      )}
+      <button onClick={checkAnswers} style={{ padding: "10px 20px" }}>
+        Check Answers
+      </button>
 
-      {allCorrectOnPage && currentPage < Math.floor(questions.length / questionsPerPage) && (
-        <button
-          onClick={() => {
-            setShowResults(false);
-            setCurrentPage(currentPage + 1);
-          }}
-          style={{
-            marginTop: "20px",
-            padding: "10px 25px",
-            backgroundColor: "green",
-            color: "white",
-            borderRadius: "5px",
-            cursor: "pointer",
-          }}
-        >
-          Next Page ➡️
-        </button>
+      {showResults && (
+        <h2>
+          Your score: {score}/{questions.length}
+        </h2>
       )}
-
-      <AnimatePresence>
-        {feedback && (
-          <motion.div
-            key={feedback}
-            initial={{ opacity: 0, scale: 0.5, y: 50 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, y: -50 }}
-            transition={{ duration: 0.5 }}
-            style={{
-              position: "fixed",
-              top: "40%",
-              left: "50%",
-              transform: "translate(-50%, -50%)",
-              fontSize: "60px",
-            }}
-          >
-            {feedback}
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
