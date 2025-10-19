@@ -8,11 +8,16 @@ export default function App() {
   const [showResults, setShowResults] = useState(false);
   const [feedback, setFeedback] = useState(null);
   const [hintLevels, setHintLevels] = useState([]);
-  const [hintCount, setHintCount] = useState(0); // total hints used
+  const [hintCount, setHintCount] = useState(0);
+  const [currentPage, setCurrentPage] = useState(0);
+
+  const questionsPerPage = 10;
+  const startIdx = currentPage * questionsPerPage;
+  const endIdx = startIdx + questionsPerPage;
+  const pageQuestions = questions.slice(startIdx, endIdx);
 
   useEffect(() => {
-    // Shuffle questions
-    const shuffled = [...questionsData].sort(() => Math.random() - 0.5);
+    const shuffled = [...questionsData]; // can shuffle if you want
     setQuestions(shuffled);
     setUserAnswers(Array(shuffled.length).fill(""));
     setHintLevels(Array(shuffled.length).fill(0));
@@ -33,30 +38,36 @@ export default function App() {
     }
   };
 
-  const checkAnswers = () => setShowResults(true);
-
-  const handleRetry = () => window.location.reload();
-
-  // Base score
-  const correctAnswers = userAnswers.reduce(
-    (a, v, i) => a + (v.trim() === questions[i]?.answer ? 1 : 0),
-    0
-  );
-
-  // Penalty: -0.25 points per hint
-  const penalty = hintCount * 0.25;
-  const finalScore = Math.max(correctAnswers - penalty, 0).toFixed(2);
-
   const handleFeedback = (isCorrect) => {
     setFeedback(isCorrect ? "👏" : "❌");
     setTimeout(() => setFeedback(null), 1000);
   };
 
-  return (
-    <div style={{ padding: "20px", maxWidth: "600px", margin: "auto" }}>
-      <h1>JLPT N5 Grammar Quiz</h1>
+  const checkAnswers = () => setShowResults(true);
 
-      {questions.map((q, i) => (
+  const handleRetry = () => window.location.reload();
+
+  const correctAnswers = userAnswers.reduce(
+    (a, v, i) => a + (v.trim() === questions[i]?.answer ? 1 : 0),
+    0
+  );
+
+  const penalty = hintCount * 0.25;
+  const finalScore = Math.max(correctAnswers - penalty, 0).toFixed(2);
+
+  // Check if all questions on the current page are correct
+  const allCorrectOnPage = pageQuestions.every(
+    (q, i) => userAnswers[startIdx + i].trim() === q.answer
+  );
+
+  return (
+    <div style={{ padding: "20px", maxWidth: "650px", margin: "auto" }}>
+      <h1>JLPT N5 Grammar Quiz</h1>
+      <h3>
+        Page {currentPage + 1} / {Math.ceil(questions.length / questionsPerPage)}
+      </h3>
+
+      {pageQuestions.map((q, i) => (
         <div
           key={i}
           style={{
@@ -66,40 +77,42 @@ export default function App() {
             borderRadius: "5px",
           }}
         >
-          <p>{i + 1}. {q.jp}</p>
+          <p>{startIdx + i + 1}. {q.jp}</p>
           <p style={{ color: "#555" }}>{q.en}</p>
           <input
             type="text"
-            value={userAnswers[i]}
-            onChange={(e) => handleChange(i, e.target.value)}
-            onBlur={() => handleFeedback(userAnswers[i].trim() === q.answer)}
+            value={userAnswers[startIdx + i]}
+            onChange={(e) => handleChange(startIdx + i, e.target.value)}
+            onBlur={() =>
+              handleFeedback(userAnswers[startIdx + i].trim() === q.answer)
+            }
             placeholder="Type your answer"
           />
-
           {!showResults && (
             <button
               style={{ marginLeft: "10px" }}
-              onClick={() => handleHint(i)}
-              disabled={hintLevels[i] >= q.answer.length}
+              onClick={() => handleHint(startIdx + i)}
+              disabled={hintLevels[startIdx + i] >= q.answer.length}
             >
               Hint
             </button>
           )}
-
-          {hintLevels[i] > 0 && (
+          {hintLevels[startIdx + i] > 0 && (
             <p style={{ color: "blue" }}>
-              Hint: {q.answer.slice(0, hintLevels[i])}
-              {hintLevels[i] < q.answer.length ? "..." : ""}
+              Hint: {q.answer.slice(0, hintLevels[startIdx + i])}
+              {hintLevels[startIdx + i] < q.answer.length ? "..." : ""}
             </p>
           )}
-
           {showResults && (
             <p
               style={{
-                color: userAnswers[i].trim() === q.answer ? "green" : "red",
+                color:
+                  userAnswers[startIdx + i].trim() === q.answer
+                    ? "green"
+                    : "red",
               }}
             >
-              {userAnswers[i].trim() === q.answer
+              {userAnswers[startIdx + i].trim() === q.answer
                 ? "✅ Correct"
                 : "❌ Correct: " + q.answer}
             </p>
@@ -124,6 +137,25 @@ export default function App() {
             Try Again 🔁
           </button>
         </div>
+      )}
+
+      {allCorrectOnPage && currentPage < Math.floor(questions.length / questionsPerPage) && (
+        <button
+          onClick={() => {
+            setShowResults(false);
+            setCurrentPage(currentPage + 1);
+          }}
+          style={{
+            marginTop: "20px",
+            padding: "10px 25px",
+            backgroundColor: "green",
+            color: "white",
+            borderRadius: "5px",
+            cursor: "pointer",
+          }}
+        >
+          Next Page ➡️
+        </button>
       )}
 
       <AnimatePresence>
