@@ -2,7 +2,7 @@
 [
   {"jp": "ごはんを（食べる　　）から、テレビをみます。", "en": "After eating, I’ll watch TV.", "answer": "食べて"},
   {"jp": "このペンを（　つかう　）か。", "en": "May I use this pen?", "answer": "つかってもいいです"},
-  {"jp": "このへやに（　入る　）。", "en": "You may not enter this room.", "answer": "入っていけません"},
+  {"jp": "このへやに（　入る　）。", "en": "You may not enter this room.", "answer": "入ってはいけません"},
   {"jp": "ドアを（あける　　）。", "en": "Please open the door.", "answer": "あけてください"},
   {"jp": "ここで　たばこを（　すう　）。", "en": "You may not smoke here.", "answer": "すってはいけません"},
   {"jp": "シャワーを（　あびる　）、ねます。", "en": "After taking a shower, I’ll sleep.", "answer": "あびて"},
