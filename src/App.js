@@ -6,12 +6,11 @@ import questionsData from "./questions.json";
 export default function App() {
   const [questions, setQuestions] = useState([]);
   const [userAnswers, setUserAnswers] = useState([]);
-  const [showResults, setShowResults] = useState(false);
-  const [isCorrect, setIsCorrect] = useState(false);
-  const [showFeedback, setShowFeedback] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [isCorrect, setIsCorrect] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
-  const [nextPageAvailable, setNextPageAvailable] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
 
   const questionsPerPage = 10;
 
@@ -20,54 +19,82 @@ export default function App() {
     setUserAnswers(Array(questionsData.length).fill(""));
   }, []);
 
-  const startIndex = currentPage * questionsPerPage;
-  const currentQuestions = questions.slice(startIndex, startIndex + questionsPerPage);
-
-  const handleChange = (index, value) => {
-    const updatedAnswers = [...userAnswers];
-    updatedAnswers[startIndex + index] = value;
-    setUserAnswers(updatedAnswers);
+  const handleChange = (i, val) => {
+    const newAnswers = [...userAnswers];
+    newAnswers[i] = val;
+    setUserAnswers(newAnswers);
   };
 
-  const handleCheckAnswer = (index) => {
-    const globalIndex = startIndex + index;
-    const userAnswer = userAnswers[globalIndex].trim();
-    const correctAnswer = questions[globalIndex]?.answer;
+  const handleCheckPage = () => {
+    const start = currentPage * questionsPerPage;
+    const end = start + questionsPerPage;
+    const correctCount = questions
+      .slice(start, end)
+      .reduce(
+        (acc, q, idx) =>
+          acc +
+          (userAnswers[start + idx].trim() === q.answer.trim() ? 1 : 0),
+        0
+      );
 
-    const correct = userAnswer === correctAnswer;
-    setIsCorrect(correct);
+    if (correctCount === questionsPerPage) {
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 10000);
+      if (end >= questions.length) {
+        setShowSummary(true);
+      } else {
+        setCurrentPage(currentPage + 1);
+      }
+    } else {
+      alert(
+        `You got ${correctCount}/${questionsPerPage} correct. Try again before continuing!`
+      );
+    }
+  };
+
+  const handleCheckAnswer = (index, correctAnswer) => {
+    const isAnsCorrect = userAnswers[index].trim() === correctAnswer.trim();
+    setIsCorrect(isAnsCorrect);
     setShowFeedback(true);
     setTimeout(() => setShowFeedback(false), 1000);
+  };
 
-    // Check if all 10 answers on the current page are correct
-    const allCorrect = currentQuestions.every(
-      (q, i) => userAnswers[startIndex + i].trim() === q.answer
+  const handleBackPage = () => {
+    if (currentPage > 0) setCurrentPage(currentPage - 1);
+  };
+
+  const handleTryAgain = () => {
+    setUserAnswers(Array(questions.length).fill(""));
+    setCurrentPage(0);
+    setShowSummary(false);
+  };
+
+  const start = currentPage * questionsPerPage;
+  const end = start + questionsPerPage;
+  const pageQuestions = questions.slice(start, end);
+
+  if (showSummary) {
+    return (
+      <div style={{ textAlign: "center", padding: "20px" }}>
+        <h1>🎉 JLPT N5 Grammar Quiz Completed!</h1>
+        <h2>✅ All Answers Summary</h2>
+        <ul style={{ textAlign: "left", display: "inline-block" }}>
+          {questions.map((q, i) => (
+            <li key={i} style={{ marginBottom: "10px" }}>
+              <strong>{i + 1}. {q.jp}</strong><br />
+              Correct Answer: <span style={{ color: "green" }}>{q.answer}</span>
+            </li>
+          ))}
+        </ul>
+        <button
+          onClick={handleTryAgain}
+          style={{ marginTop: "20px", padding: "10px 20px", fontSize: "16px" }}
+        >
+          🔁 Try Again?
+        </button>
+      </div>
     );
-
-    if (allCorrect && !nextPageAvailable) {
-      setShowConfetti(true);
-      setTimeout(() => {
-        setShowConfetti(false);
-        setNextPageAvailable(true);
-      }, 10000); // show confetti for 10s, then show next button
-    }
-  };
-
-  const handleNextPage = () => {
-    setNextPageAvailable(false);
-    setShowConfetti(false);
-
-    if (startIndex + questionsPerPage < questions.length) {
-      setCurrentPage((prev) => prev + 1);
-    } else {
-      setShowResults(true);
-    }
-  };
-
-  const score = userAnswers.reduce(
-    (sum, val, i) => sum + (val.trim() === questions[i]?.answer ? 1 : 0),
-    0
-  );
+  }
 
   return (
     <div className="App" style={{ textAlign: "center", padding: "20px" }}>
@@ -87,84 +114,78 @@ export default function App() {
           boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
         }}
       >
-        <strong>Instructions:</strong>
-        <br />
+        <strong>Instructions:</strong><br />
         Complete each sentence by changing the dictionary form inside parentheses
-        into the <strong>て-form</strong>.
-        <br />
-        Use one of the following patterns:
-        <br />
+        into the <strong>て-form</strong>.<br />
+        Use one of the following patterns:<br />
         ～てください、～てもいいですか、～てはいけません、～てもいいです、～て～、or ～てから。
       </p>
 
-      {!showResults ? (
-        <>
-          <h2>
-            Page {currentPage + 1} / {Math.ceil(questions.length / questionsPerPage)}
-          </h2>
-
-          {currentQuestions.map((q, i) => (
-            <div
-              key={i}
-              style={{
-                marginBottom: "20px",
-                padding: "10px",
-                border: "1px solid #ccc",
-                borderRadius: "8px",
-                maxWidth: "600px",
-                margin: "20px auto",
-              }}
-            >
-              <p style={{ fontSize: "18px" }}>
-                {startIndex + i + 1}. {q.jp}
-              </p>
-              <p style={{ color: "#555" }}>{q.en}</p>
-              <input
-                type="text"
-                value={userAnswers[startIndex + i]}
-                onChange={(e) => handleChange(i, e.target.value)}
-                placeholder="Type your answer"
-                style={{ padding: "8px", fontSize: "16px" }}
-              />
-              <br />
-              <button
-                onClick={() => handleCheckAnswer(i)}
-                style={{ padding: "6px 12px", marginTop: "5px" }}
-              >
-                Check
-              </button>
-            </div>
-          ))}
-
-          {/* ✅ Next Page button (after confetti) */}
-          {nextPageAvailable && (
-            <button
-              onClick={handleNextPage}
-              style={{
-                marginTop: "20px",
-                padding: "10px 25px",
-                fontSize: "16px",
-                borderRadius: "8px",
-                backgroundColor: "#4CAF50",
-                color: "white",
-                border: "none",
-                cursor: "pointer",
-              }}
-            >
-              Next Page →
-            </button>
-          )}
-        </>
-      ) : (
-        <div>
-          <h2>🎉 Congratulations! You finished all questions!</h2>
-          <h3>
-            Final Score: {score}/{questions.length}
-          </h3>
+      {pageQuestions.map((q, i) => (
+        <div
+          key={i}
+          style={{
+            border: "1px solid #ccc",
+            borderRadius: "10px",
+            padding: "15px",
+            marginBottom: "15px",
+          }}
+        >
+          <p>
+            <strong>{start + i + 1}. {q.jp}</strong>
+          </p>
+          <p style={{ color: "#555" }}>{q.en}</p>
+          <input
+            type="text"
+            value={userAnswers[start + i]}
+            onChange={(e) => handleChange(start + i, e.target.value)}
+            placeholder="Type your answer"
+            style={{ padding: "8px", fontSize: "16px", width: "80%" }}
+          />
+          <button
+            onClick={() => handleCheckAnswer(start + i, q.answer)}
+            style={{
+              marginLeft: "10px",
+              padding: "5px 10px",
+              fontSize: "14px",
+            }}
+          >
+            Check
+          </button>
         </div>
-      )}
+      ))}
 
-      {/* 👏❌ feedback animation */}
+      <div style={{ marginTop: "20px" }}>
+        <button
+          onClick={handleBackPage}
+          disabled={currentPage === 0}
+          style={{
+            marginRight: "10px",
+            padding: "10px 20px",
+            backgroundColor: currentPage === 0 ? "#ccc" : "#007bff",
+            color: "white",
+            border: "none",
+            borderRadius: "5px",
+          }}
+        >
+          ◀ Back Page
+        </button>
+
+        <button
+          onClick={handleCheckPage}
+          style={{
+            padding: "10px 20px",
+            backgroundColor: "#28a745",
+            color: "white",
+            border: "none",
+            borderRadius: "5px",
+          }}
+        >
+          ✅ Check Page
+        </button>
+      </div>
+
+      {/* 👏 or ❌ Floating Animation */}
       <AnimatePresence>
         {showFeedback && (
           <motion.div
